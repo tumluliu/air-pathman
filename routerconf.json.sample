@@ -1,0 +1,30 @@
+{
+    "mapbox": {
+        "datasource": "osm",
+        "key": "MAPBOX_TOKEN"
+    },
+    "mapzen": {
+        "datasource": "osm",
+        "key": "MAPZEN_KEY"
+    },
+    "graphhopper": {
+        "datasource": "osm",
+        "key": "GRAPHHOPPER_API_KEY"
+    },
+    "openrouteservice": {
+        "datasource": "osm",
+        "key": "ORS_API_KEY"
+    },
+    "google": {
+        "datasource": "proprietary",
+        "key": "GOOGLE_KEY"
+    },
+    "tomtom": {
+        "datasource": "proprietary",
+        "key": "TOMTOM-API-KEY"
+    },
+    "here": {
+        "datasource": "proprietary",
+        "key": "HERE-API-KEY"
+    }
+}
