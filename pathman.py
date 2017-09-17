@@ -31,10 +31,10 @@ Arguments:
                    configured in appconf.json file
     PROFILE        Routing profile name indicating what kind of transportation
                    mode should be use, default to walking
-    INPUT_FILE     Points information file in csv format. Must have `start_lon`,
-                   `start_lat`, `end_lon`, `end_lat` and `id` fields at least to
-                   record the longtitude, latitude coordinates of the originand id
-                   source/origin/starting location of the probing job.
+    INPUT_FILE     Points information file in csv format. Must have start_lon,
+                   start_lat, end_lon, end_lat and id fields at least to
+                   record the longtitude, latitude coordinates of the origin 
+                   and destination pairs
     MONGO_CONN     MongoDB connection string, default to mongodb://localhost:27017/
     PARAMS         JSON file containing extra parameters for the router
 
@@ -47,9 +47,9 @@ import json
 import os
 import csv
 import datetime
-import pymongo
 import logging.config
 import logging
+from pymongo import MongoClient
 from docopt import docopt, DocoptExit
 try:
     from schema import Schema, And, Or, Optional, Use, SchemaError
@@ -91,7 +91,7 @@ def validate_arguments(raw_args, conf):
         '-i': And(os.path.isfile,
                   error="INPUT_FILE file {0} does not exist".format(raw_args['-i'])),
         Optional('-o', default='mongodb://localhost:27017/'): And(
-            os.path.isdir,
+            lambda o: str.lower(o).startswith('mongodb://'),
             error="{0} is not a valid mongodb connection string, e.g. mongodb://localhost:27017/"
             .format(raw_args['-o'])),
         Optional('-x'): Or(None, os.path.isfile,
@@ -112,25 +112,25 @@ def validate_arguments(raw_args, conf):
     return args
 
 
-def save_route_to(route, mongo_client):
-    LOGGER.debug("Save the found route information to %s", mongo_client)
-    mongo_client.insert_one(route)
+def save_route_to(route, collection):
+    collection.insert_one(route)
 
 
-def get_route(router, source, target, output_dir, params=None):
-    LOGGER.debug("Try searching for a path from %s to %s",
-                 str(source), str(target))
-    res = router.find_path(source['x'], source['y'], target['x'], target['y'],
+def crawl_route(router, source_x, source_y, target_x, target_y, mongo, params=None):
+    LOGGER.debug("Try searching for a path from (%s, %s) to (%s, %s)",
+                 str(source_x), str(source_y), str(target_x), str(target_y))
+    res = router.find_path(source_x, source_y, target_x, target_y,
                            params)
     if res is None:
-        return 0
+        res = {}
     # The found routes will be stored in MongoDB,
-    # `pathman` database, `paths` collection
-    os.makedirs(output_dir, exist_ok=True)
-    save_route_to(res,
-                  os.path.join(output_dir, '{0}_{1}.json'.format(
-                      source['id'], target['id'])))
-    return 1
+    # `pathman` database, {router} collection
+    db = mongo.pathman
+    paths = db[router.__class__.__name__]
+    LOGGER.debug("Save the found route information to MongDB %s, collection %s",
+                 mongo.address, paths.full_name)
+    res["date"] = datetime.datetime.utcnow()
+    save_route_to(res, paths)
 
 
 def main():
@@ -162,23 +162,24 @@ def main():
         for r in dt:
             LOGGER.debug("Current row in the points info file: %s", str(r))
             od_pairs.append({
-                'x': float(r['x']),
-                'y': float(r['y']),
-                'id': int(r['id'])
+                'id': int(r['id']),
+                'o_x': float(r['start_lon']),
+                'o_y': float(r['start_lat']),
+                'd_x': float(r['end_lon']),
+                'd_y': float(r['end_lat'])
             })
-
     LOGGER.info("Load extra parameter file for the current router")
     if args['-x'] is None:
         params = None
     else:
         with open(args['-x']) as f:
             params = json.load(f)
-
-    with open(os.path.join(args['-o'], '{0}.csv'.format(args['-r'])),
-              'w') as f:
-        fieldnames = points_with_accessibility[0].keys()
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(points_with_accessibility)
-
+    mongo_client = MongoClient(args['-o'])
+    for od in od_pairs:
+        crawl_route(router, od['o_x'], od['o_y'],
+                    od['d_x'], od['d_y'], mongo_client, params)
     LOGGER.info("All done!")
+
+
+if __name__ == '__main__':
+    main()
