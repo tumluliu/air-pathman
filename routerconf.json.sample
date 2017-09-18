@@ -1,30 +1,37 @@
 {
     "mapbox": {
         "datasource": "osm",
-        "key": "MAPBOX_TOKEN"
+        "key": "MAPBOX_TOKEN",
+        "rate_limit": -1
     },
     "mapzen": {
         "datasource": "osm",
-        "key": "MAPZEN_KEY"
+        "key": "MAPZEN_KEY",
+        "rate_limit": -1
     },
     "graphhopper": {
         "datasource": "osm",
-        "key": "GRAPHHOPPER_API_KEY"
+        "key": "GRAPHHOPPER_API_KEY",
+        "rate_limit": -1
     },
     "openrouteservice": {
         "datasource": "osm",
-        "key": "ORS_API_KEY"
+        "key": "ORS_API_KEY",
+        "rate_limit": -1
     },
     "google": {
         "datasource": "proprietary",
-        "key": "GOOGLE_KEY"
+        "key": "GOOGLE_KEY",
+        "rate_limit": -1
     },
     "tomtom": {
         "datasource": "proprietary",
-        "key": "TOMTOM-API-KEY"
+        "key": "TOMTOM-API-KEY",
+        "rate_limit": -1
     },
     "here": {
         "datasource": "proprietary",
-        "key": "HERE-API-KEY"
+        "key": "HERE-API-KEY",
+        "rate_limit": -1
     }
 }
