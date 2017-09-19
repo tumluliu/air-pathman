@@ -116,7 +116,7 @@ def save_route_to(route, collection):
     collection.insert_one(route)
 
 
-def crawl_route(router, source_x, source_y, target_x, target_y, mongo, params=None):
+def crawl_route(router, source_x, source_y, target_x, target_y, mongo, params=None, custom_id=0):
     LOGGER.debug("Try searching for a path from (%s, %s) to (%s, %s)",
                  str(source_x), str(source_y), str(target_x), str(target_y))
     res = router.find_path(source_x, source_y, target_x, target_y,
@@ -130,6 +130,7 @@ def crawl_route(router, source_x, source_y, target_x, target_y, mongo, params=No
     LOGGER.debug("Save the found route information to MongDB %s, collection %s",
                  mongo.address, paths.full_name)
     res["date"] = datetime.datetime.utcnow()
+    res["cid"] = custom_id
     save_route_to(res, paths)
 
 
@@ -175,9 +176,18 @@ def main():
         with open(args['-x']) as f:
             params = json.load(f)
     mongo_client = MongoClient(args['-o'])
-    for od in od_pairs:
-        crawl_route(router, od['o_x'], od['o_y'],
-                    od['d_x'], od['d_y'], mongo_client, params)
+    for i, od in enumerate(od_pairs):
+        print("Processing progress: {0} / {1}".format(i + 1, len(od_pairs)))
+        try:
+            crawl_route(router, od['o_x'], od['o_y'],
+                        od['d_x'], od['d_y'], mongo_client, params, od['id'])
+        except Exception as ex:
+            LOGGER.error(
+                "Caught exception %s when processing %s", str(ex), str(od))
+            with open("errors.txt", "a") as f:
+                f.write(str(od))
+                f.write('\n')
+            continue
     LOGGER.info("All done!")
 
 
